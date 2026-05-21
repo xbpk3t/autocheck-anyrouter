@@ -1,0 +1,65 @@
+name: AnyRouter 自动签到
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PYTHONIOENCODING: utf-8
+      # 仓库可见性，用于隐私控制
+      REPO_VISIBILITY: ${{ github.event.repository.visibility }}
+      # 时区设置（可选，默认为 Asia/Shanghai 中国时区）
+      TZ: ${{ secrets.TZ }}
+      # 时间戳格式（可选，默认为 %Y-%m-%d %H:%M:%S）
+      TIMESTAMP_FORMAT: ${{ secrets.TIMESTAMP_FORMAT }}
+      # 账号配置
+      ANYROUTER_ACCOUNTS: ${{ secrets.ANYROUTER_ACCOUNTS }}
+      # 是否显示敏感信息
+      SHOW_SENSITIVE_INFO: ${{ secrets.SHOW_SENSITIVE_INFO }}
+      # 通知配置
+      DINGTALK_NOTIF_CONFIG: ${{ secrets.DINGTALK_NOTIF_CONFIG }}
+      EMAIL_NOTIF_CONFIG: ${{ secrets.EMAIL_NOTIF_CONFIG }}
+      PUSHPLUS_NOTIF_CONFIG: ${{ secrets.PUSHPLUS_NOTIF_CONFIG }}
+      SERVERPUSH_NOTIF_CONFIG: ${{ secrets.SERVERPUSH_NOTIF_CONFIG }}
+      FEISHU_NOTIF_CONFIG: ${{ secrets.FEISHU_NOTIF_CONFIG }}
+      WECOM_NOTIF_CONFIG: ${{ secrets.WECOM_NOTIF_CONFIG }}
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v5
+
+      - name: ⏳ 随机延迟（避免规律性被封）
+        run: sleep $(( RANDOM % 3600 ))
+
+      - name: 🔑 加载账号配置
+        uses: oNaiPs/secrets-to-env-action@v1.8
+        with:
+          secrets: ${{ toJSON(secrets) }}
+          include: ANYROUTER_ACCOUNT_*
+
+      - name: 🔧 安装 Mise
+        # 临时固定到已切换为 Node.js 24 的 commit，待上游发布正式 tag 后再回切。
+        uses: jdx/mise-action@a0eaf7aa03d8c15f7e32f71429266c3d5d3cb442
+        with:
+          cache_key: "{{default}}-${{ hashFiles(pyproject.toml) }}"
+
+      - name: ⚙️ 安装依赖
+        run: mise run install
+
+      - name: 🎭 配置 Playwright 环境
+        uses: ./.github/actions/setup-playwright
+        id: playwright-setup
+
+      - name: 💾 恢复余额历史缓存
+        uses: actions/cache@v5
+        with:
+          path: balance_hash.txt
+          key: balance-hash-${{ github.run_id }}
+          restore-keys: |
+            balance-hash-
+
+      - name: 🚀 执行签到任务
+        run: mise run checkin
