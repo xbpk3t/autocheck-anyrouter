@@ -1,7 +1,7 @@
 name: AnyRouter 自动签到
 on:
   schedule:
-    - cron: 10 16 * * *
+    - cron: 40 8 * * *
   workflow_dispatch: null
 jobs:
   checkin:
