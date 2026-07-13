@@ -105,8 +105,8 @@ class CheckinService:
 			logger.error('无法获取 WAF cookies', account_name)
 			return False, None
 
-		# 步骤2：使用 httpx 进行 API 请求（禁用 HTTP/2 以绕过 ESA WAF 检测）
-		async with httpx.AsyncClient(http2=False, timeout=30.0) as client:
+		# 步骤2：使用 httpx 进行 API 请求
+		async with httpx.AsyncClient(http2=True, timeout=30.0) as client:
 			try:
 				# 合并 WAF cookies 和用户 cookies
 				all_cookies = {**waf_cookies, **user_cookies}
